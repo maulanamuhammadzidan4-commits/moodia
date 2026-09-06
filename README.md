@@ -16,13 +16,16 @@ Inside of your Astro project, you'll see the following folders and files:
 │   └── favicon.svg
 ├── src
 │   ├── assets
-│   │   └── astro.svg
+│   │   └── logo.svg
 │   ├── components
 │   │   └── Welcome.astro
+│   ├── data
+│   │   ├── company.ts
+│   │   └── product.ts
 │   ├── layouts
 │   │   └── Layout.astro
-│   └── pages
-│       └── index.astro
+│   ├── pages
+│   │   └── index.astro
 └── package.json
 ```
 
