@@ -7,10 +7,19 @@ const imageSrc = dev.imageUrl ? (dev.imageUrl.startsWith('/') ? dev.imageUrl : `
 ---
 
 <section id="developer" class="min-h-[100dvh] py-16 md:py-24 flex items-center justify-center bg-gradient-to-b from-white via-blue-50/40 to-slate-50 relative overflow-hidden">
-    <!-- Decorative background glow -->
-    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl pointer-events-none -z-10"></div>
+    <!-- Faint static base dots (latar belakang titik samar ambient) -->
+    <div 
+        class="absolute -inset-8 bg-[radial-gradient(#93c5fd_1px,transparent_1px)] [background-size:24px_24px] opacity-20 pointer-events-none"
+    ></div>
 
-    <div class="max-w-4xl w-full mx-auto px-4">
+    <!-- Interactive Proximity Dots: opasitas tinggi & jelas dekat kursor, menghilang saat jauh -->
+    <div 
+        id="developer-dots-proximity"
+        class="absolute -inset-8 bg-[radial-gradient(#2563eb_1.5px,transparent_1.5px)] [background-size:24px_24px] opacity-0 transition-opacity duration-300 pointer-events-none will-change-[mask-image,opacity,transform] z-0"
+        style="mask-image: radial-gradient(circle 320px at var(--mouse-x, -9999px) var(--mouse-y, -9999px), black 0%, rgba(0,0,0,0.4) 50%, transparent 100%); -webkit-mask-image: radial-gradient(circle 320px at var(--mouse-x, -9999px) var(--mouse-y, -9999px), black 0%, rgba(0,0,0,0.4) 50%, transparent 100%);"
+    ></div>
+
+    <div class="relative z-10 max-w-4xl w-full mx-auto px-4">
         <!-- Section Header -->
         <div class="text-center mb-12">
             <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-100/80 text-blue-800 text-xs font-bold mb-4">
@@ -26,7 +35,7 @@ const imageSrc = dev.imageUrl ? (dev.imageUrl.startsWith('/') ? dev.imageUrl : `
         </div>
 
         <!-- Developer Profile Card -->
-        <div class="bg-white rounded-3xl p-6 sm:p-10 border border-blue-100 shadow-xl shadow-blue-950/5 relative overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-blue-950/10">
+        <div class="bg-white/90 rounded-3xl p-6 sm:p-10 border border-blue-100 shadow-xl shadow-blue-950/5 relative overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-blue-950/10">
             <!-- Top accent bar -->
             <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-400"></div>
 
@@ -35,19 +44,19 @@ const imageSrc = dev.imageUrl ? (dev.imageUrl.startsWith('/') ? dev.imageUrl : `
                 <div class="relative shrink-0 group">
                     <div class="w-36 h-36 sm:w-40 sm:h-40 rounded-2xl p-1 bg-gradient-to-tr from-blue-600 to-indigo-400 shadow-lg shadow-blue-600/20">
                         <div class="w-full h-full rounded-[14px] overflow-hidden bg-slate-100 flex items-center justify-center relative">
-                            <a href={dev.githubUrl} target="_blank">
-                            {imageSrc ? (
-                                <img
-                                    src={imageSrc}
-                                    alt={dev.name}
-                                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                    onerror="this.onerror=null; this.parentElement.classList.add('fallback-avatar');"
-                                />
-                            ) : null}
-                            <!-- Fallback icon jika gambar belum ada atau gagal load -->
-                            <div class="fallback-placeholder absolute inset-0 hidden items-center justify-center bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700">
-                                <User class="w-16 h-16 opacity-70" />
-                            </div>
+                            <a href={dev.githubUrl} target="_blank" rel="noopener noreferrer">
+                                {imageSrc ? (
+                                    <img
+                                        src={imageSrc}
+                                        alt={dev.name}
+                                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                        onerror="this.onerror=null; this.parentElement.classList.add('fallback-avatar');"
+                                    />
+                                ) : null}
+                                <!-- Fallback icon jika gambar belum ada atau gagal load -->
+                                <div class="fallback-placeholder absolute inset-0 hidden items-center justify-center bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700">
+                                    <User class="w-16 h-16 opacity-70" />
+                                </div>
                             </a>
                         </div>
                     </div>
@@ -105,6 +114,96 @@ const imageSrc = dev.imageUrl ? (dev.imageUrl.startsWith('/') ? dev.imageUrl : `
         </div>
     </div>
 </section>
+
+<script>
+    const section = document.getElementById('developer');
+    const proximityDots = document.getElementById('developer-dots-proximity');
+
+    if (section && proximityDots) {
+        let mouseX = 0;
+        let mouseY = 0;
+        let currentX = 0;
+        let currentY = 0;
+
+        let targetParallaxX = 0;
+        let targetParallaxY = 0;
+        let currentParallaxX = 0;
+        let currentParallaxY = 0;
+
+        let isInside = false;
+        let rafId: number | null = null;
+
+        // Linear interpolation untuk pergerakan halus (smooth damping)
+        const lerp = (start: number, end: number, factor: number) => start + (end - start) * factor;
+
+        const updatePosition = () => {
+            // Pergerakan titik fokus mask mengikuti kursor
+            currentX = lerp(currentX, mouseX, 0.2);
+            currentY = lerp(currentY, mouseY, 0.2);
+
+            // Pergerakan parallax halus
+            currentParallaxX = lerp(currentParallaxX, targetParallaxX, 0.08);
+            currentParallaxY = lerp(currentParallaxY, targetParallaxY, 0.08);
+
+            // Posisi mask relatif terhadap container (inset -32px / -inset-8)
+            const maskX = currentX + 32;
+            const maskY = currentY + 32;
+            proximityDots.style.setProperty('--mouse-x', `${maskX.toFixed(1)}px`);
+            proximityDots.style.setProperty('--mouse-y', `${maskY.toFixed(1)}px`);
+            proximityDots.style.transform = `translate3d(${currentParallaxX.toFixed(2)}px, ${currentParallaxY.toFixed(2)}px, 0)`;
+
+            // Loop berjalan selama pointer di dalam atau parallax kembali ke 0
+            if (isInside || Math.abs(currentParallaxX) > 0.05 || Math.abs(currentParallaxY) > 0.05) {
+                rafId = requestAnimationFrame(updatePosition);
+            } else {
+                proximityDots.style.transform = 'translate3d(0, 0, 0)';
+                rafId = null;
+            }
+        };
+
+        section.addEventListener('pointerenter', (e) => {
+            const rect = section.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+            currentX = mouseX;
+            currentY = mouseY;
+            isInside = true;
+            proximityDots.style.opacity = '1';
+
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            targetParallaxX = ((mouseX - centerX) / centerX) * 12;
+            targetParallaxY = ((mouseY - centerY) / centerY) * 12;
+
+            if (!rafId) rafId = requestAnimationFrame(updatePosition);
+        });
+
+        section.addEventListener('pointermove', (e) => {
+            const rect = section.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+            if (!isInside) {
+                isInside = true;
+                proximityDots.style.opacity = '1';
+            }
+
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            targetParallaxX = ((mouseX - centerX) / centerX) * 12;
+            targetParallaxY = ((mouseY - centerY) / centerY) * 12;
+
+            if (!rafId) rafId = requestAnimationFrame(updatePosition);
+        });
+
+        section.addEventListener('pointerleave', () => {
+            isInside = false;
+            proximityDots.style.opacity = '0';
+            targetParallaxX = 0;
+            targetParallaxY = 0;
+            if (!rafId) rafId = requestAnimationFrame(updatePosition);
+        });
+    }
+</script>
 
 <style>
     /* Styling fallback saat gambar avatar tidak ditemukan */
