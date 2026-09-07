@@ -3,16 +3,28 @@ import { companyInfo } from '../data/company';
 import { Sparkles, ArrowRight } from 'lucide-astro';
 ---
 
-<section id="hero" class="py-16 md:py-24 bg-gradient-to-b from-blue-50/70 via-white to-white">
-    <div class="max-w-6xl mx-auto px-4 text-center">
+<section id="hero" class="relative min-h-[calc(100dvh-4rem)] py-12 md:py-20 flex items-center justify-center bg-gradient-to-bl from-blue-50/65 via-white to-white overflow-hidden">
+    <!-- Faint static base dots (latar belakang titik samar ambient) -->
+    <div 
+        class="absolute -inset-8 bg-[radial-gradient(#93c5fd_1px,transparent_1px)] [background-size:24px_24px] opacity-20 pointer-events-none"
+    ></div>
+
+    <!-- Interactive Proximity Dots: opasitas tinggi & jelas dekat kursor, menghilang saat jauh -->
+    <div 
+        id="hero-dots-proximity"
+        class="absolute -inset-8 bg-[radial-gradient(#2563eb_1.5px,transparent_1.5px)] [background-size:24px_24px] opacity-0 transition-opacity duration-300 pointer-events-none will-change-[mask-image,opacity,transform] z-0"
+        style="mask-image: radial-gradient(circle 320px at var(--mouse-x, -9999px) var(--mouse-y, -9999px), black 0%, rgba(0,0,0,0.4) 50%, transparent 100%); -webkit-mask-image: radial-gradient(circle 320px at var(--mouse-x, -9999px) var(--mouse-y, -9999px), black 0%, rgba(0,0,0,0.4) 50%, transparent 100%);"
+    ></div>
+
+    <div class="relative z-10 max-w-6xl mx-auto px-4 text-center">
         <!-- Badge bernuansa Biru -->
-        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-100/80 text-blue-800 text-xs font-bold mb-6">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-100/80 text-blue-800 text-xs font-bold mb-6 backdrop-blur-xs">
             <Sparkles class="w-4 h-4 text-blue-700" />
             <span>Custom Merchandise Premium</span>
         </div>
 
         <!-- Title & Subtitle -->
-        <h1 class="text-3xl md:text-5xl font-extrabold text-blue-950 tracking-tight leading-tight mb-4 max-w-3xl mx-auto">
+        <h1 class="text-3xl md:text-5xl font-extrabold text-blue-950 tracking-tight leading-tight mb-4 max-w-4xl mx-auto">
             {companyInfo.tagline}
         </h1>
         <p class="text-slate-600 text-base md:text-lg max-w-2xl mx-auto mb-8">
@@ -23,17 +35,107 @@ import { Sparkles, ArrowRight } from 'lucide-astro';
         <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
             <a 
                 href="#products" 
-                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-800 hover:bg-blue-900 text-white font-bold px-6 py-3 rounded-xl transition shadow-lg shadow-blue-900/15"
+                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-800 hover:bg-blue-900 text-white font-bold px-6 py-3 rounded-xl transition shadow-lg shadow-blue-900/15 hover:-translate-y-0.5"
             >
                 <span>Lihat Katalog</span>
                 <ArrowRight class="w-4 h-4" />
             </a>
             <a 
                 href="#how-to-order" 
-                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-blue-200 hover:bg-blue-50 text-blue-900 font-bold px-6 py-3 rounded-xl transition"
+                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-blue-200 hover:bg-blue-50 text-blue-900 font-bold px-6 py-3 rounded-xl transition shadow-xs hover:-translate-y-0.5"
             >
                 <span>Cara Pemesanan</span>
             </a>
         </div>
     </div>
 </section>
+
+<script>
+    const hero = document.getElementById('hero');
+    const proximityDots = document.getElementById('hero-dots-proximity');
+
+    if (hero && proximityDots) {
+        let mouseX = 0;
+        let mouseY = 0;
+        let currentX = 0;
+        let currentY = 0;
+
+        let targetParallaxX = 0;
+        let targetParallaxY = 0;
+        let currentParallaxX = 0;
+        let currentParallaxY = 0;
+
+        let isInside = false;
+        let rafId: number | null = null;
+
+        // Linear interpolation untuk pergerakan halus (smooth damping)
+        const lerp = (start: number, end: number, factor: number) => start + (end - start) * factor;
+
+        const updatePosition = () => {
+            // Pergerakan titik fokus mask mengikuti kursor
+            currentX = lerp(currentX, mouseX, 0.2);
+            currentY = lerp(currentY, mouseY, 0.2);
+
+            // Pergerakan parallax halus
+            currentParallaxX = lerp(currentParallaxX, targetParallaxX, 0.08);
+            currentParallaxY = lerp(currentParallaxY, targetParallaxY, 0.08);
+
+            // Posisi mask relatif terhadap container (inset -32px / -inset-8)
+            const maskX = currentX + 32;
+            const maskY = currentY + 32;
+            proximityDots.style.setProperty('--mouse-x', `${maskX.toFixed(1)}px`);
+            proximityDots.style.setProperty('--mouse-y', `${maskY.toFixed(1)}px`);
+            proximityDots.style.transform = `translate3d(${currentParallaxX.toFixed(2)}px, ${currentParallaxY.toFixed(2)}px, 0)`;
+
+            // Loop berjalan selama pointer di dalam atau parallax kembali ke 0
+            if (isInside || Math.abs(currentParallaxX) > 0.05 || Math.abs(currentParallaxY) > 0.05) {
+                rafId = requestAnimationFrame(updatePosition);
+            } else {
+                proximityDots.style.transform = 'translate3d(0, 0, 0)';
+                rafId = null;
+            }
+        };
+
+        hero.addEventListener('pointerenter', (e) => {
+            const rect = hero.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+            currentX = mouseX;
+            currentY = mouseY;
+            isInside = true;
+            proximityDots.style.opacity = '1';
+
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            targetParallaxX = ((mouseX - centerX) / centerX) * 12;
+            targetParallaxY = ((mouseY - centerY) / centerY) * 12;
+
+            if (!rafId) rafId = requestAnimationFrame(updatePosition);
+        });
+
+        hero.addEventListener('pointermove', (e) => {
+            const rect = hero.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+            if (!isInside) {
+                isInside = true;
+                proximityDots.style.opacity = '1';
+            }
+
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            targetParallaxX = ((mouseX - centerX) / centerX) * 12;
+            targetParallaxY = ((mouseY - centerY) / centerY) * 12;
+
+            if (!rafId) rafId = requestAnimationFrame(updatePosition);
+        });
+
+        hero.addEventListener('pointerleave', () => {
+            isInside = false;
+            proximityDots.style.opacity = '0';
+            targetParallaxX = 0;
+            targetParallaxY = 0;
+            if (!rafId) rafId = requestAnimationFrame(updatePosition);
+        });
+    }
+</script>
