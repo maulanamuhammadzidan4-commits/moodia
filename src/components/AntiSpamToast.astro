@@ -1,0 +1,279 @@
+---
+import { CheckCircle2, Clock } from 'lucide-astro';
+---
+
+<!-- Floating Anti-Spam Toast Banner -->
+<div 
+    id="anti-spam-toast" 
+    class="fixed right-6 z-50 max-w-sm w-[calc(100%-3rem)] bg-slate-900/95 text-white backdrop-blur-md px-4 py-3.5 rounded-2xl shadow-2xl border border-slate-700/60 translate-y-12 opacity-0 pointer-events-none transition-all duration-300 ease-out bottom-6"
+    role="alert"
+    aria-live="polite"
+>
+    <div class="flex items-start gap-3">
+        <div id="toast-icon-box" class="p-2 rounded-xl bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">
+            <Clock class="w-5 h-5" id="toast-clock-icon" />
+            <CheckCircle2 class="w-5 h-5 hidden" id="toast-check-icon" />
+        </div>
+
+        <div class="flex-grow min-w-0">
+            <div class="flex items-center justify-between gap-2">
+                <h4 id="toast-title" class="font-bold text-xs text-amber-300 uppercase tracking-wider">
+                    Anti-Spam Aktif
+                </h4>
+                <span id="toast-timer-badge" class="text-xs font-mono font-extrabold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-md border border-amber-500/30">
+                    30s
+                </span>
+            </div>
+            <p id="toast-desc" class="text-xs text-slate-300 mt-1 leading-relaxed">
+                Menahan pesanan berikutnya selama <span id="toast-seconds-count" class="font-bold text-white">30</span> detik demi mencegah spam admin.
+            </p>
+        </div>
+    </div>
+
+    <!-- Mini Progress Bar -->
+    <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-3">
+        <div id="toast-progress-bar" class="bg-amber-400 h-full w-full transition-all duration-1000 ease-linear rounded-full"></div>
+    </div>
+</div>
+
+<script>
+    const COOLDOWN_DURATION = 30; // 30 detik
+    const STORAGE_KEY = 'moodia_order_cooldown_expiry';
+
+    let intervalId: number | null = null;
+    let isToastActive = false;
+    let isScrollTopVisible = false;
+
+    function getRemainingCooldown(): number {
+        const expiry = localStorage.getItem(STORAGE_KEY);
+        if (!expiry) return 0;
+        const remainingMs = parseInt(expiry, 10) - Date.now();
+        return remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0;
+    }
+
+    function setCooldown(seconds: number) {
+        const expiryTime = Date.now() + seconds * 1000;
+        localStorage.setItem(STORAGE_KEY, expiryTime.toString());
+    }
+
+    function clearCooldown() {
+        localStorage.removeItem(STORAGE_KEY);
+    }
+
+    function updateToastPosition() {
+        const toast = document.getElementById('anti-spam-toast');
+        if (!toast) return;
+
+        // Atur kelas posisi vertikal (bottom-20 jika tombol scroll to top ada, bottom-6 jika tidak ada)
+        if (isScrollTopVisible) {
+            toast.classList.remove('bottom-6');
+            toast.classList.add('bottom-20');
+        } else {
+            toast.classList.remove('bottom-20');
+            toast.classList.add('bottom-6');
+        }
+
+        // Atur visibilitas dan animasi masuk/keluar
+        if (isToastActive) {
+            toast.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+        } else {
+            toast.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+            toast.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+        }
+    }
+
+    function showToast(seconds: number) {
+        const timerBadge = document.getElementById('toast-timer-badge');
+        const secondsCount = document.getElementById('toast-seconds-count');
+        const progressBar = document.getElementById('toast-progress-bar');
+        const title = document.getElementById('toast-title');
+        const desc = document.getElementById('toast-desc');
+        const clockIcon = document.getElementById('toast-clock-icon');
+        const checkIcon = document.getElementById('toast-check-icon');
+        const iconBox = document.getElementById('toast-icon-box');
+
+        // Reset icon & text
+        if (clockIcon && checkIcon && iconBox && title && desc) {
+            clockIcon.classList.remove('hidden');
+            checkIcon.classList.add('hidden');
+            iconBox.className = 'p-2 rounded-xl bg-amber-500/20 text-amber-400 shrink-0 mt-0.5';
+            title.textContent = 'Anti-Spam Aktif';
+            title.className = 'font-bold text-xs text-amber-300 uppercase tracking-wider';
+            desc.innerHTML = `Menahan pesanan berikutnya selama <span id="toast-seconds-count" class="font-bold text-white">${seconds}</span> detik demi mencegah spam admin.`;
+        }
+
+        if (timerBadge) timerBadge.textContent = `${seconds}s`;
+        if (secondsCount) secondsCount.textContent = `${seconds}`;
+        if (progressBar) {
+            const percent = (seconds / COOLDOWN_DURATION) * 100;
+            progressBar.style.width = `${percent}%`;
+            progressBar.className = 'bg-amber-400 h-full transition-all duration-1000 ease-linear rounded-full';
+        }
+
+        isToastActive = true;
+        updateToastPosition();
+    }
+
+    function showToastComplete() {
+        const title = document.getElementById('toast-title');
+        const desc = document.getElementById('toast-desc');
+        const timerBadge = document.getElementById('toast-timer-badge');
+        const clockIcon = document.getElementById('toast-clock-icon');
+        const checkIcon = document.getElementById('toast-check-icon');
+        const iconBox = document.getElementById('toast-icon-box');
+        const progressBar = document.getElementById('toast-progress-bar');
+
+        if (clockIcon && checkIcon && iconBox && title && desc && timerBadge && progressBar) {
+            clockIcon.classList.add('hidden');
+            checkIcon.classList.remove('hidden');
+            iconBox.className = 'p-2 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5';
+            title.textContent = 'Siap Digunakan';
+            title.className = 'font-bold text-xs text-emerald-400 uppercase tracking-wider';
+            timerBadge.className = 'text-xs font-mono font-extrabold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-md border border-emerald-500/30';
+            timerBadge.textContent = 'Ready';
+            desc.textContent = 'Tombol pemesanan sekarang dapat digunakan kembali.';
+            progressBar.style.width = '100%';
+            progressBar.className = 'bg-emerald-400 h-full transition-all duration-300 ease-linear rounded-full';
+        }
+
+        isToastActive = true;
+        updateToastPosition();
+
+        setTimeout(() => {
+            hideToast();
+        }, 2500);
+    }
+
+    function hideToast() {
+        isToastActive = false;
+        updateToastPosition();
+    }
+
+    function updateButtonsState(remainingSeconds: number) {
+        const orderButtons = document.querySelectorAll<HTMLAnchorElement>('[data-order-btn]');
+
+        orderButtons.forEach((btn) => {
+            const textSpan = btn.querySelector('.order-btn-text') as HTMLElement | null;
+            if (!btn.dataset.defaultText && textSpan) {
+                btn.dataset.defaultText = textSpan.textContent || 'Pesan';
+            }
+            const defaultText = btn.dataset.defaultText || 'Pesan';
+
+            if (remainingSeconds > 0) {
+                btn.classList.add('opacity-60', 'cursor-not-allowed', 'filter', 'grayscale-[60%]');
+                btn.setAttribute('aria-disabled', 'true');
+                if (textSpan) {
+                    textSpan.textContent = `Tunggu (${remainingSeconds}s)`;
+                }
+            } else {
+                btn.classList.remove('opacity-60', 'cursor-not-allowed', 'filter', 'grayscale-[60%]');
+                btn.removeAttribute('aria-disabled');
+                if (textSpan) {
+                    textSpan.textContent = defaultText;
+                }
+            }
+        });
+    }
+
+    function startCooldownLoop() {
+        if (intervalId !== null) {
+            clearInterval(intervalId);
+        }
+
+        const tick = () => {
+            const remaining = getRemainingCooldown();
+
+            if (remaining > 0) {
+                updateButtonsState(remaining);
+                showToast(remaining);
+            } else {
+                if (intervalId !== null) {
+                    clearInterval(intervalId);
+                    intervalId = null;
+                }
+                clearCooldown();
+                updateButtonsState(0);
+                showToastComplete();
+            }
+        };
+
+        tick();
+        intervalId = window.setInterval(tick, 1000);
+    }
+
+    function initAntiSpam() {
+        // Deteksi posisi scroll awal
+        isScrollTopVisible = window.scrollY > 300;
+        updateToastPosition();
+
+        // Dengarkan custom event dari ScrollToTop
+        window.addEventListener('scrolltop-change', (e: any) => {
+            isScrollTopVisible = !!e.detail?.visible;
+            updateToastPosition();
+        });
+
+        // Backup listener scroll langsung
+        window.addEventListener('scroll', () => {
+            const visible = window.scrollY > 300;
+            if (visible !== isScrollTopVisible) {
+                isScrollTopVisible = visible;
+                updateToastPosition();
+            }
+        }, { passive: true });
+
+        // Cek apakah ada cooldown aktif saat halaman dimuat
+        const initialRemaining = getRemainingCooldown();
+        if (initialRemaining > 0) {
+            startCooldownLoop();
+        }
+
+        // Tangani klik pada tombol pemesanan
+        document.addEventListener('click', (e) => {
+            const target = (e.target as HTMLElement).closest('[data-order-btn]') as HTMLAnchorElement | null;
+            if (!target) return;
+
+            const remaining = getRemainingCooldown();
+
+            if (remaining > 0) {
+                // Sedang dalam cooldown: cegah navigasi & beritahu pengguna
+                e.preventDefault();
+                e.stopPropagation();
+                showToast(remaining);
+                
+                // Efek pulse feedback pada tombol yang diklik
+                target.classList.add('animate-pulse');
+                setTimeout(() => target.classList.remove('animate-pulse'), 500);
+                return;
+            }
+
+            // Memulai cooldown 30 detik
+            setCooldown(COOLDOWN_DURATION);
+            
+            // Berikan jeda sejenak agar link terbuka dengan mulus, lalu aktifkan timer
+            setTimeout(() => {
+                startCooldownLoop();
+            }, 100);
+        }, true);
+
+        // Sinkronisasi jika ada tab lain yang membuka/mengubah cooldown
+        window.addEventListener('storage', (e) => {
+            if (e.key === STORAGE_KEY) {
+                const remaining = getRemainingCooldown();
+                if (remaining > 0) {
+                    startCooldownLoop();
+                } else {
+                    updateButtonsState(0);
+                    hideToast();
+                }
+            }
+        });
+    }
+
+    // Jalankan saat script diinisialisasi
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAntiSpam);
+    } else {
+        initAntiSpam();
+    }
+</script>

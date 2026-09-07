@@ -1,11 +1,48 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import Hero from '../components/Hero.astro';
+import Features from '../components/Features.astro';
+import ProductCard from '../components/ProductCard.astro';
+import HowToOrder from '../components/HowToOrder.astro';
+import Developer from '../components/Developer.astro';
+import Footer from '../components/Footer.astro';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+// Mengimpor data array produk dari TypeScript file kita di Fase 2
+import { products } from '../data/products';
+import { companyInfo } from '../data/company';
 ---
 
-<Layout>
-	<Welcome />
+<Layout title={`${companyInfo.name} - Custom Merchandise Premium`}>
+    <Navbar />
+    <main>
+        <Hero />
+        <Features />
+        <HowToOrder />
+
+        <!-- Section Katalog Produk -->
+        <section id="products" class="py-16 md:py-24 bg-slate-50">
+            <div class="max-w-6xl mx-auto px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-2xl md:text-4xl font-extrabold text-blue-950 tracking-tight">
+                        Produk Kami
+                    </h2>
+                    <p class="text-slate-600 text-sm md:text-base mt-2 max-w-xl mx-auto">
+                        Temukan berbagai pilihan merchandise kustom berkualitas tinggi dengan harga terjangkau.
+                    </p>
+                </div>
+
+                <!-- Render Looping Produk dari Array TypeScript -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {products.map((item) => (
+                        <ProductCard product={item} />
+                    ))}
+                </div>
+            </div>
+        </section>
+
+        <!-- Section Informasi Developer -->
+        <Developer />
+    </main>
+    <Footer />
 </Layout>

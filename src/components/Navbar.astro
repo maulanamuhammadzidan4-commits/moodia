@@ -1,0 +1,32 @@
+---
+import { companyInfo } from '../data/company';
+---
+
+<header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-blue-100 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+        <!-- Brand Identity & Logo MOODIA -->
+        <a href="#" class="flex items-center gap-2 hover:opacity-80 transition">
+            <img src="/logo.svg" alt="MOODIA Logo" class="h-8 w-auto object-contain" />
+            <span class="font-extrabold text-xl tracking-tight text-blue-900">{companyInfo.name}</span>
+        </a>
+
+        <!-- Navigation Links -->
+        <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
+            <a href="#hero" class="hover:text-blue-700 transition">Beranda</a>
+            <a href="#how-to-order" class="hover:text-blue-700 transition">Cara Pesan</a>
+            <a href="#products" class="hover:text-blue-700 transition">Produk</a>
+            <a href="#developer" class="hover:text-blue-700 transition">Developer</a>
+        </nav>
+
+        <!-- Call to Action Button dengan aksen Biru MOODIA -->
+        <a 
+            href={`https://wa.me/${companyInfo.whatsappNumber}`} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            data-order-btn
+            class="bg-blue-700 hover:bg-blue-800 text-white text-xs md:text-sm font-bold px-5 py-2 rounded-full transition shadow-md shadow-blue-200"
+        >
+            <span class="order-btn-text">Hubungi Kami</span>
+        </a>
+    </div>
+</header>

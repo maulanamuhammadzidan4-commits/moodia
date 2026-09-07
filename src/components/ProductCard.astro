@@ -1,0 +1,89 @@
+---
+import { Image } from 'astro:assets';
+import type { Product } from '../data/products';
+import { companyInfo } from '../data/company';
+import { MessageCircle, Tag } from 'lucide-astro';
+
+interface Props {
+    product: Product;
+}
+
+const { product } = Astro.props;
+
+const images = import.meta.glob<{ default: ImageMetadata }>('../assets/*.{png,jpg,jpeg,webp}');
+const imagePath = `../assets/${product.imageName}`;
+
+if (!images[imagePath]) {
+    throw new Error(`[Astro] Gambar "${product.imageName}" tidak ditemukan di folder src/assets/`);
+}
+
+const formatRupiah = (val: number) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
+};
+
+const waText = encodeURIComponent(`Halo MOODIA, saya berminat untuk memesan produk *${product.name}*. Bisakah beritahu informasi detailnya?`);
+const waUrl = `https://wa.me/${companyInfo.whatsappNumber}?text=${waText}`;
+---
+
+<div class="bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-blue-200 hover:shadow-md transition overflow-hidden flex flex-col h-full group">
+    <!-- Visual Produk -->
+    <div class="relative aspect-square bg-slate-50 overflow-hidden">
+        <Image 
+            src={images[imagePath]()} 
+            alt={product.name} 
+            class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+        />
+        {product.isBestSeller && (
+            <span class="absolute top-3 right-3 bg-amber-500 text-white text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full shadow-sm">
+                Best Seller
+            </span>
+        )}
+    </div>
+
+    <!-- Detail Produk -->
+    <div class="p-5 flex flex-col flex-grow">
+        <div class="text-xs font-bold text-blue-700 mb-1">{product.category}</div>
+        <h3 class="font-bold text-slate-900 text-lg mb-2">{product.name}</h3>
+        <p class="text-slate-600 text-xs leading-relaxed mb-4 flex-grow">{product.description}</p>
+
+        <!-- Variasi Ukuran Kaos -->
+        {product.variants && (
+            <div class="mb-4 bg-blue-50/50 p-2.5 rounded-lg border border-blue-100">
+                <div class="text-[11px] font-bold text-blue-900 mb-1.5 flex items-center gap-1">
+                    <Tag class="w-3 h-3 text-blue-700" />
+                    <span>Variasi Ukuran & Harga:</span>
+                </div>
+                <div class="flex flex-wrap gap-1">
+                    {product.variants.map((v) => (
+                        <span class="text-[10px] bg-white border border-blue-200 text-slate-700 px-2 py-0.5 rounded font-semibold">
+                            {v.size}: {formatRupiah(v.price)}
+                        </span>
+                    ))}
+                </div>
+            </div>
+        )}
+
+        <!-- Harga & Tombol Pesan -->
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 mt-auto">
+            <div>
+                <span class="text-[10px] text-slate-400 block font-medium">
+                    {product.variants ? 'Mulai dari' : 'Harga'}
+                </span>
+                <span class="text-base font-extrabold text-blue-950">
+                    {formatRupiah(product.basePrice)}
+                </span>
+            </div>
+
+            <a 
+                href={waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-order-btn
+                class="order-btn inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all shadow-sm select-none"
+            >
+                <MessageCircle class="w-3.5 h-3.5 order-icon" />
+                <span class="order-btn-text">Pesan</span>
+            </a>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,47 @@
+---
+const steps = [
+    {
+        step: "01",
+        title: "Pilih Produk",
+        description: "Pilih produk kustom yang kamu inginkan dari katalog di atas."
+    },
+    {
+        step: "02",
+        title: "Klik Pesan via WA",
+        description: "Klik tombol 'Pesan' untuk terhubung langsung dengan admin kami."
+    },
+    {
+        step: "03",
+        title: "Kirim Desain & Detail",
+        description: "Kirimkan file desain kustommu dan tentukan jumlah pesanan."
+    },
+    {
+        step: "04",
+        title: "Produksi & Kirim",
+        description: "Lakukan pembayaran, pesanan diproduksi, lalu siap dikirim/diambil!"
+    }
+];
+---
+
+<section id="how-to-order" class="py-16 bg-white">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="text-center mb-12">
+            <h2 class="text-2xl md:text-3xl font-extrabold text-blue-950 tracking-tight">
+                Cara Pemesanan Mudah
+            </h2>
+            <p class="text-slate-600 text-sm mt-2">
+                Hanya 4 langkah praktis untuk mendapatkan merchandise kustom milikmu.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {steps.map((item) => (
+                <div class="relative p-6 rounded-2xl border border-slate-100 bg-slate-50/50">
+                    <span class="text-3xl font-black text-blue-200 block mb-2">{item.step}</span>
+                    <h3 class="font-bold text-slate-900 text-base mb-1">{item.title}</h3>
+                    <p class="text-slate-600 text-xs leading-relaxed">{item.description}</p>
+                </div>
+            ))}
+        </div>
+    </div>
+</section>

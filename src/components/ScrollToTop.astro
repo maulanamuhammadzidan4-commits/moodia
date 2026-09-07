@@ -1,0 +1,55 @@
+---
+import { ArrowUp } from 'lucide-astro';
+---
+
+<!-- Tombol Scroll To Top -->
+<button
+    id="scroll-to-top-btn"
+    type="button"
+    aria-label="Kembali ke atas"
+    title="Kembali ke atas"
+    class="fixed bottom-6 right-6 z-40 p-3 rounded-full bg-blue-700 hover:bg-blue-800 text-white shadow-lg shadow-blue-700/25 border border-white/20 transition-all duration-300 transform translate-y-12 opacity-0 pointer-events-none hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+>
+    <ArrowUp class="w-5 h-5" />
+</button>
+
+<script>
+    function initScrollToTop() {
+        const btn = document.getElementById('scroll-to-top-btn');
+        if (!btn) return;
+
+        let lastVisible = false;
+
+        const toggleVisibility = () => {
+            const isVisible = window.scrollY > 300;
+            if (isVisible) {
+                btn.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
+                btn.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+            } else {
+                btn.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+                btn.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+            }
+
+            if (lastVisible !== isVisible) {
+                lastVisible = isVisible;
+                window.dispatchEvent(new CustomEvent('scrolltop-change', { detail: { visible: isVisible } }));
+            }
+        };
+
+        window.addEventListener('scroll', toggleVisibility, { passive: true });
+        toggleVisibility(); // Cek posisi scroll awal
+
+        btn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initScrollToTop);
+    } else {
+        initScrollToTop();
+    }
+</script>
