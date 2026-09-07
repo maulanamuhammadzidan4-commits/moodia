@@ -136,23 +136,34 @@ const imageSrc = dev.imageUrl ? (dev.imageUrl.startsWith('/') ? dev.imageUrl : `
         // Linear interpolation untuk pergerakan halus (smooth damping)
         const lerp = (start: number, end: number, factor: number) => start + (end - start) * factor;
 
-        const updatePosition = () => {
-            // Pergerakan titik fokus mask mengikuti kursor
-            currentX = lerp(currentX, mouseX, 0.2);
-            currentY = lerp(currentY, mouseY, 0.2);
+        const updatePosition = (timestamp: number) => {
+            // Gerakan acak dan lambat saat kursor diam (harmonic slow floating)
+            const idleFloatX = Math.sin(timestamp * 0.0011) * 7 + Math.cos(timestamp * 0.0019) * 4;
+            const idleFloatY = Math.cos(timestamp * 0.0013) * 7 + Math.sin(timestamp * 0.0017) * 4;
 
-            // Pergerakan parallax halus
-            currentParallaxX = lerp(currentParallaxX, targetParallaxX, 0.08);
-            currentParallaxY = lerp(currentParallaxY, targetParallaxY, 0.08);
+            const maskIdleX = Math.sin(timestamp * 0.0015) * 5;
+            const maskIdleY = Math.cos(timestamp * 0.0012) * 5;
+
+            // Pergerakan titik fokus mask mengikuti kursor
+            currentX = lerp(currentX, mouseX, 0.15);
+            currentY = lerp(currentY, mouseY, 0.15);
+
+            // Pergerakan parallax yang tetap melayang lembut meskipun kursor diam
+            const finalTargetX = isInside ? (targetParallaxX + idleFloatX) : 0;
+            const finalTargetY = isInside ? (targetParallaxY + idleFloatY) : 0;
+
+            currentParallaxX = lerp(currentParallaxX, finalTargetX, 0.08);
+            currentParallaxY = lerp(currentParallaxY, finalTargetY, 0.08);
 
             // Posisi mask relatif terhadap container (inset -32px / -inset-8)
-            const maskX = currentX + 32;
-            const maskY = currentY + 32;
+            const maskX = currentX + 32 + (isInside ? maskIdleX : 0);
+            const maskY = currentY + 32 + (isInside ? maskIdleY : 0);
+
             proximityDots.style.setProperty('--mouse-x', `${maskX.toFixed(1)}px`);
             proximityDots.style.setProperty('--mouse-y', `${maskY.toFixed(1)}px`);
             proximityDots.style.transform = `translate3d(${currentParallaxX.toFixed(2)}px, ${currentParallaxY.toFixed(2)}px, 0)`;
 
-            // Loop berjalan selama pointer di dalam atau parallax kembali ke 0
+            // Loop terus berjalan selama pointer di dalam agar tetap bergerak acak & lambat
             if (isInside || Math.abs(currentParallaxX) > 0.05 || Math.abs(currentParallaxY) > 0.05) {
                 rafId = requestAnimationFrame(updatePosition);
             } else {
