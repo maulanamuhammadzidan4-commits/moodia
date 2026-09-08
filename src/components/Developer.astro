@@ -1,9 +1,8 @@
 ---
 import { dev } from '../data/dev';
 import { Github, Linkedin, Code2, ExternalLink, Sparkles, User } from 'lucide-astro';
-
-// Normalisasi URL gambar jika ada
-const imageSrc = dev.imageUrl ? (dev.imageUrl.startsWith('/') ? dev.imageUrl : `/${dev.imageUrl}`) : null;
+import { Image } from 'astro:assets';
+import devAvatar from '../assets/dev.png';
 ---
 
 <section id="developer" class="min-h-[100dvh] py-16 md:py-24 flex items-center justify-center bg-gradient-to-b from-white via-blue-50/40 to-slate-50 relative overflow-hidden">
@@ -45,14 +44,11 @@ const imageSrc = dev.imageUrl ? (dev.imageUrl.startsWith('/') ? dev.imageUrl : `
                     <div class="w-36 h-36 sm:w-40 sm:h-40 rounded-2xl p-1 bg-gradient-to-tr from-blue-600 to-indigo-400 shadow-lg shadow-blue-600/20">
                         <div class="w-full h-full rounded-[14px] overflow-hidden bg-slate-100 flex items-center justify-center relative">
                             <a href={dev.githubUrl} target="_blank" rel="noopener noreferrer">
-                                {imageSrc ? (
-                                    <img
-                                        src={imageSrc}
-                                        alt={dev.name}
-                                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                        onerror="this.onerror=null; this.parentElement.classList.add('fallback-avatar');"
-                                    />
-                                ) : null}
+                                <Image
+                                    src={devAvatar}
+                                    alt={dev.name}
+                                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                />
                                 <!-- Fallback icon jika gambar belum ada atau gagal load -->
                                 <div class="fallback-placeholder absolute inset-0 hidden items-center justify-center bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700">
                                     <User class="w-16 h-16 opacity-70" />
