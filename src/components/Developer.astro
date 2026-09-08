@@ -131,48 +131,159 @@ const imageSrc = dev.imageUrl ? (dev.imageUrl.startsWith('/') ? dev.imageUrl : `
         let currentParallaxY = 0;
 
         let isInside = false;
+        let isVisible = true;
         let rafId: number | null = null;
 
-        // Linear interpolation untuk pergerakan halus (smooth damping)
         const lerp = (start: number, end: number, factor: number) => start + (end - start) * factor;
 
-        const updatePosition = (timestamp: number) => {
-            // Gerakan acak dan lambat saat kursor diam (harmonic slow floating)
-            const idleFloatX = Math.sin(timestamp * 0.0011) * 7 + Math.cos(timestamp * 0.0019) * 4;
-            const idleFloatY = Math.cos(timestamp * 0.0013) * 7 + Math.sin(timestamp * 0.0017) * 4;
+        // Cek apakah user menggunakan perangkat sentuh / layar HP
+        const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
 
-            const maskIdleX = Math.sin(timestamp * 0.0015) * 5;
-            const maskIdleY = Math.cos(timestamp * 0.0012) * 5;
+        // State untuk spot acak di perangkat mobile (HP)
+        interface MobileSpot {
+            x: number;
+            y: number;
+            targetX: number;
+            targetY: number;
+            baseRadius: number;
+            currentRadius: number;
+            speed: number;
+            nextRetargetTime: number;
+            phase: number;
+        }
 
-            // Pergerakan titik fokus mask mengikuti kursor
-            currentX = lerp(currentX, mouseX, 0.15);
-            currentY = lerp(currentY, mouseY, 0.15);
+        let mobileSpots: MobileSpot[] = [];
+        let touchActive = false;
+        let touchX = 0;
+        let touchY = 0;
 
-            // Pergerakan parallax yang tetap melayang lembut meskipun kursor diam
-            const finalTargetX = isInside ? (targetParallaxX + idleFloatX) : 0;
-            const finalTargetY = isInside ? (targetParallaxY + idleFloatY) : 0;
+        const initMobileSpots = (rect: DOMRect) => {
+            const w = rect.width || 360;
+            const h = rect.height || 600;
+            mobileSpots = [
+                {
+                    x: w * 0.2,
+                    y: h * 0.25,
+                    targetX: Math.random() * (w - 80) + 40,
+                    targetY: Math.random() * (h - 80) + 40,
+                    baseRadius: 160,
+                    currentRadius: 160,
+                    speed: 0.022,
+                    nextRetargetTime: 0,
+                    phase: 0
+                },
+                {
+                    x: w * 0.8,
+                    y: h * 0.55,
+                    targetX: Math.random() * (w - 80) + 40,
+                    targetY: Math.random() * (h - 80) + 40,
+                    baseRadius: 140,
+                    currentRadius: 140,
+                    speed: 0.018,
+                    nextRetargetTime: 1500,
+                    phase: Math.PI / 2
+                },
+                {
+                    x: w * 0.4,
+                    y: h * 0.85,
+                    targetX: Math.random() * (w - 80) + 40,
+                    targetY: Math.random() * (h - 80) + 40,
+                    baseRadius: 130,
+                    currentRadius: 130,
+                    speed: 0.016,
+                    nextRetargetTime: 2800,
+                    phase: Math.PI
+                }
+            ];
+        };
 
-            currentParallaxX = lerp(currentParallaxX, finalTargetX, 0.08);
-            currentParallaxY = lerp(currentParallaxY, finalTargetY, 0.08);
-
-            // Posisi mask relatif terhadap container (inset -32px / -inset-8)
-            const maskX = currentX + 32 + (isInside ? maskIdleX : 0);
-            const maskY = currentY + 32 + (isInside ? maskIdleY : 0);
-
-            proximityDots.style.setProperty('--mouse-x', `${maskX.toFixed(1)}px`);
-            proximityDots.style.setProperty('--mouse-y', `${maskY.toFixed(1)}px`);
-            proximityDots.style.transform = `translate3d(${currentParallaxX.toFixed(2)}px, ${currentParallaxY.toFixed(2)}px, 0)`;
-
-            // Loop terus berjalan selama pointer di dalam agar tetap bergerak acak & lambat
-            if (isInside || Math.abs(currentParallaxX) > 0.05 || Math.abs(currentParallaxY) > 0.05) {
-                rafId = requestAnimationFrame(updatePosition);
-            } else {
-                proximityDots.style.transform = 'translate3d(0, 0, 0)';
+        const updateAnimation = (timestamp: number) => {
+            if (!isVisible) {
                 rafId = null;
+                return;
+            }
+
+            const isMobile = isTouchDevice();
+
+            if (isMobile) {
+                // MODE HP: Titik timbul & melayang di posisi acak secara dinamis
+                const rect = section.getBoundingClientRect();
+                if (mobileSpots.length === 0) initMobileSpots(rect);
+
+                proximityDots.style.opacity = '1';
+
+                const masks: string[] = [];
+
+                mobileSpots.forEach((spot, idx) => {
+                    // Update target acak berkala
+                    if (timestamp > spot.nextRetargetTime) {
+                        spot.targetX = Math.random() * (rect.width - 100) + 50;
+                        spot.targetY = Math.random() * (rect.height - 100) + 50;
+                        spot.nextRetargetTime = timestamp + 3000 + Math.random() * 2500;
+                    }
+
+                    // Jika user menyentuh layar, spot pertama mendekat ke sentuhan
+                    if (touchActive && idx === 0) {
+                        spot.x = lerp(spot.x, touchX + 32, 0.1);
+                        spot.y = lerp(spot.y, touchY + 32, 0.1);
+                    } else {
+                        // Gerakan mengalir halus menuju target acak + harmonic floating
+                        const floatX = Math.sin(timestamp * 0.0012 + spot.phase) * 6;
+                        const floatY = Math.cos(timestamp * 0.0015 + spot.phase) * 6;
+                        spot.x = lerp(spot.x, spot.targetX + 32 + floatX, spot.speed);
+                        spot.y = lerp(spot.y, spot.targetY + 32 + floatY, spot.speed);
+                    }
+
+                    // Efek breathing lembut pada ukuran spot
+                    const pulse = Math.sin(timestamp * 0.002 + spot.phase) * 20;
+                    spot.currentRadius = spot.baseRadius + pulse;
+
+                    masks.push(`radial-gradient(circle ${spot.currentRadius.toFixed(0)}px at ${spot.x.toFixed(1)}px ${spot.y.toFixed(1)}px, black 0%, rgba(0,0,0,0.35) 55%, transparent 100%)`);
+                });
+
+                const combinedMask = masks.join(', ');
+                proximityDots.style.maskImage = combinedMask;
+                proximityDots.style.webkitMaskImage = combinedMask;
+                proximityDots.style.transform = 'translate3d(0, 0, 0)';
+
+                rafId = requestAnimationFrame(updateAnimation);
+            } else {
+                // MODE DESKTOP: Tetap sesuai interaksi kursor asli tanpa perubahan
+                const idleFloatX = Math.sin(timestamp * 0.0011) * 7 + Math.cos(timestamp * 0.0019) * 4;
+                const idleFloatY = Math.cos(timestamp * 0.0013) * 7 + Math.sin(timestamp * 0.0017) * 4;
+
+                const maskIdleX = Math.sin(timestamp * 0.0015) * 5;
+                const maskIdleY = Math.cos(timestamp * 0.0012) * 5;
+
+                currentX = lerp(currentX, mouseX, 0.15);
+                currentY = lerp(currentY, mouseY, 0.15);
+
+                const finalTargetX = isInside ? (targetParallaxX + idleFloatX) : 0;
+                const finalTargetY = isInside ? (targetParallaxY + idleFloatY) : 0;
+
+                currentParallaxX = lerp(currentParallaxX, finalTargetX, 0.08);
+                currentParallaxY = lerp(currentParallaxY, finalTargetY, 0.08);
+
+                const maskX = currentX + 32 + (isInside ? maskIdleX : 0);
+                const maskY = currentY + 32 + (isInside ? maskIdleY : 0);
+
+                const desktopMask = `radial-gradient(circle 320px at ${maskX.toFixed(1)}px ${maskY.toFixed(1)}px, black 0%, rgba(0,0,0,0.4) 50%, transparent 100%)`;
+                proximityDots.style.maskImage = desktopMask;
+                proximityDots.style.webkitMaskImage = desktopMask;
+                proximityDots.style.transform = `translate3d(${currentParallaxX.toFixed(2)}px, ${currentParallaxY.toFixed(2)}px, 0)`;
+
+                if (isInside || Math.abs(currentParallaxX) > 0.05 || Math.abs(currentParallaxY) > 0.05) {
+                    rafId = requestAnimationFrame(updateAnimation);
+                } else {
+                    proximityDots.style.transform = 'translate3d(0, 0, 0)';
+                    rafId = null;
+                }
             }
         };
 
+        // Pointer event listeners khusus desktop
         section.addEventListener('pointerenter', (e) => {
+            if (isTouchDevice()) return;
             const rect = section.getBoundingClientRect();
             mouseX = e.clientX - rect.left;
             mouseY = e.clientY - rect.top;
@@ -186,10 +297,11 @@ const imageSrc = dev.imageUrl ? (dev.imageUrl.startsWith('/') ? dev.imageUrl : `
             targetParallaxX = ((mouseX - centerX) / centerX) * 12;
             targetParallaxY = ((mouseY - centerY) / centerY) * 12;
 
-            if (!rafId) rafId = requestAnimationFrame(updatePosition);
+            if (!rafId) rafId = requestAnimationFrame(updateAnimation);
         });
 
         section.addEventListener('pointermove', (e) => {
+            if (isTouchDevice()) return;
             const rect = section.getBoundingClientRect();
             mouseX = e.clientX - rect.left;
             mouseY = e.clientY - rect.top;
@@ -203,16 +315,73 @@ const imageSrc = dev.imageUrl ? (dev.imageUrl.startsWith('/') ? dev.imageUrl : `
             targetParallaxX = ((mouseX - centerX) / centerX) * 12;
             targetParallaxY = ((mouseY - centerY) / centerY) * 12;
 
-            if (!rafId) rafId = requestAnimationFrame(updatePosition);
+            if (!rafId) rafId = requestAnimationFrame(updateAnimation);
         });
 
         section.addEventListener('pointerleave', () => {
+            if (isTouchDevice()) return;
             isInside = false;
             proximityDots.style.opacity = '0';
             targetParallaxX = 0;
             targetParallaxY = 0;
-            if (!rafId) rafId = requestAnimationFrame(updatePosition);
+            if (!rafId) rafId = requestAnimationFrame(updateAnimation);
         });
+
+        // Touch event listeners khusus mobile (HP) untuk interaktivitas sentuhan
+        section.addEventListener('touchstart', (e) => {
+            if (!isTouchDevice()) return;
+            const rect = section.getBoundingClientRect();
+            if (e.touches.length > 0) {
+                touchActive = true;
+                touchX = e.touches[0].clientX - rect.left;
+                touchY = e.touches[0].clientY - rect.top;
+            }
+        }, { passive: true });
+
+        section.addEventListener('touchmove', (e) => {
+            if (!isTouchDevice()) return;
+            const rect = section.getBoundingClientRect();
+            if (e.touches.length > 0) {
+                touchX = e.touches[0].clientX - rect.left;
+                touchY = e.touches[0].clientY - rect.top;
+            }
+        }, { passive: true });
+
+        section.addEventListener('touchend', () => {
+            touchActive = false;
+        }, { passive: true });
+
+        // Intersection Observer agar hemat baterai & performa di HP saat section di-scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                isVisible = entry.isIntersecting;
+                if (isVisible && isTouchDevice()) {
+                    if (!rafId) rafId = requestAnimationFrame(updateAnimation);
+                }
+            });
+        }, { threshold: 0.05 });
+
+        observer.observe(section);
+
+        // Inisialisasi awal jika di HP
+        if (isTouchDevice()) {
+            const rect = section.getBoundingClientRect();
+            initMobileSpots(rect);
+            rafId = requestAnimationFrame(updateAnimation);
+        }
+
+        // Listener resize untuk transisi mulus antara desktop & HP
+        window.addEventListener('resize', () => {
+            if (isTouchDevice()) {
+                const rect = section.getBoundingClientRect();
+                initMobileSpots(rect);
+                if (!rafId) rafId = requestAnimationFrame(updateAnimation);
+            } else {
+                if (!isInside) {
+                    proximityDots.style.opacity = '0';
+                }
+            }
+        }, { passive: true });
     }
 </script>
 
