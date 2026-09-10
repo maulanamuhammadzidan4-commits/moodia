@@ -55,6 +55,19 @@ import { Sparkles, ArrowRight } from 'lucide-astro';
     const proximityDots = document.getElementById('hero-dots-proximity');
 
     if (hero && proximityDots) {
+        let cachedWidth = 360;
+        let cachedHeight = 600;
+        let cachedLeft = 0;
+        let cachedTop = 0;
+
+        const updateCachedBounds = () => {
+            const rect = hero.getBoundingClientRect();
+            cachedWidth = rect.width || hero.offsetWidth || 360;
+            cachedHeight = rect.height || hero.offsetHeight || 600;
+            cachedLeft = rect.left + window.scrollX;
+            cachedTop = rect.top + window.scrollY;
+        };
+
         let mouseX = 0;
         let mouseY = 0;
         let currentX = 0;
@@ -71,17 +84,16 @@ import { Sparkles, ArrowRight } from 'lucide-astro';
 
         const lerp = (start: number, end: number, factor: number) => start + (end - start) * factor;
 
-        // Cek apakah user menggunakan perangkat sentuh / layar HP
+        // Cek apakah user menggunakan layar sentuh / mobile
         const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
 
-        // State untuk spot acak di perangkat mobile (HP)
+        // State untuk spot di perangkat mobile (HP)
         interface MobileSpot {
             x: number;
             y: number;
             targetX: number;
             targetY: number;
             baseRadius: number;
-            currentRadius: number;
             speed: number;
             nextRetargetTime: number;
             phase: number;
@@ -92,42 +104,29 @@ import { Sparkles, ArrowRight } from 'lucide-astro';
         let touchX = 0;
         let touchY = 0;
 
-        const initMobileSpots = (rect: DOMRect) => {
-            const w = rect.width || 360;
-            const h = rect.height || 600;
+        const initMobileSpots = () => {
+            const w = cachedWidth;
+            const h = cachedHeight;
             mobileSpots = [
                 {
-                    x: w * 0.25,
-                    y: h * 0.3,
-                    targetX: Math.random() * (w - 80) + 40,
-                    targetY: Math.random() * (h - 80) + 40,
-                    baseRadius: 160,
-                    currentRadius: 160,
+                    x: w * 0.3,
+                    y: h * 0.35,
+                    targetX: w * 0.4,
+                    targetY: h * 0.4,
+                    baseRadius: 170,
                     speed: 0.025,
                     nextRetargetTime: 0,
                     phase: 0
                 },
                 {
-                    x: w * 0.75,
-                    y: h * 0.6,
-                    targetX: Math.random() * (w - 80) + 40,
-                    targetY: Math.random() * (h - 80) + 40,
-                    baseRadius: 140,
-                    currentRadius: 140,
+                    x: w * 0.7,
+                    y: h * 0.65,
+                    targetX: w * 0.6,
+                    targetY: h * 0.6,
+                    baseRadius: 150,
                     speed: 0.02,
-                    nextRetargetTime: 1200,
+                    nextRetargetTime: 1500,
                     phase: Math.PI / 2
-                },
-                {
-                    x: w * 0.5,
-                    y: h * 0.8,
-                    targetX: Math.random() * (w - 80) + 40,
-                    targetY: Math.random() * (h - 80) + 40,
-                    baseRadius: 130,
-                    currentRadius: 130,
-                    speed: 0.018,
-                    nextRetargetTime: 2400,
-                    phase: Math.PI
                 }
             ];
         };
@@ -141,49 +140,50 @@ import { Sparkles, ArrowRight } from 'lucide-astro';
             const isMobile = isTouchDevice();
 
             if (isMobile) {
-                // MODE HP: Titik timbul & melayang di posisi acak secara dinamis
-                const rect = hero.getBoundingClientRect();
-                if (mobileSpots.length === 0) initMobileSpots(rect);
+                // MODE HP: Titik mengambang halus interaktif tanpa memicu layout reflow
+                if (mobileSpots.length === 0) initMobileSpots();
 
                 proximityDots.style.opacity = '1';
 
                 const masks: string[] = [];
 
-                mobileSpots.forEach((spot, idx) => {
-                    // Update target acak berkala
+                for (let i = 0; i < mobileSpots.length; i++) {
+                    const spot = mobileSpots[i];
+
+                    // Update target acak secara berkala
                     if (timestamp > spot.nextRetargetTime) {
-                        spot.targetX = Math.random() * (rect.width - 100) + 50;
-                        spot.targetY = Math.random() * (rect.height - 100) + 50;
-                        spot.nextRetargetTime = timestamp + 3000 + Math.random() * 2500;
+                        spot.targetX = Math.random() * (cachedWidth - 80) + 40;
+                        spot.targetY = Math.random() * (cachedHeight - 80) + 40;
+                        spot.nextRetargetTime = timestamp + 3200 + Math.random() * 2000;
                     }
 
-                    // Jika user menyentuh layar, spot pertama mendekat ke sentuhan
-                    if (touchActive && idx === 0) {
-                        spot.x = lerp(spot.x, touchX + 32, 0.1);
-                        spot.y = lerp(spot.y, touchY + 32, 0.1);
+                    // Jika user menyentuh layar, spot pertama mendekat ke posisi sentuh
+                    if (touchActive && i === 0) {
+                        spot.x = lerp(spot.x, touchX + 32, 0.12);
+                        spot.y = lerp(spot.y, touchY + 32, 0.12);
                     } else {
-                        // Gerakan mengalir halus menuju target acak + harmonic floating
+                        // Gerakan mengalir sinusoidal halus
                         const floatX = Math.sin(timestamp * 0.0012 + spot.phase) * 6;
                         const floatY = Math.cos(timestamp * 0.0015 + spot.phase) * 6;
                         spot.x = lerp(spot.x, spot.targetX + 32 + floatX, spot.speed);
                         spot.y = lerp(spot.y, spot.targetY + 32 + floatY, spot.speed);
                     }
 
-                    // Efek breathing lembut pada ukuran spot
-                    const pulse = Math.sin(timestamp * 0.002 + spot.phase) * 20;
-                    spot.currentRadius = spot.baseRadius + pulse;
+                    const pulse = Math.sin(timestamp * 0.002 + spot.phase) * 18;
+                    const radius = (spot.baseRadius + pulse) | 0;
+                    const posX = spot.x | 0;
+                    const posY = spot.y | 0;
 
-                    masks.push(`radial-gradient(circle ${spot.currentRadius.toFixed(0)}px at ${spot.x.toFixed(1)}px ${spot.y.toFixed(1)}px, black 0%, rgba(0,0,0,0.35) 55%, transparent 100%)`);
-                });
+                    masks.push(`radial-gradient(circle ${radius}px at ${posX}px ${posY}px, black 0%, rgba(0,0,0,0.35) 55%, transparent 100%)`);
+                }
 
                 const combinedMask = masks.join(', ');
                 proximityDots.style.maskImage = combinedMask;
                 proximityDots.style.webkitMaskImage = combinedMask;
-                proximityDots.style.transform = 'translate3d(0, 0, 0)';
 
                 rafId = requestAnimationFrame(updateAnimation);
             } else {
-                // MODE DESKTOP: Tetap sesuai interaksi kursor asli tanpa perubahan
+                // MODE DESKTOP: Tetap interaktif mengikuti pergerakan kursor mouse
                 const idleFloatX = Math.sin(timestamp * 0.0011) * 7 + Math.cos(timestamp * 0.0019) * 4;
                 const idleFloatY = Math.cos(timestamp * 0.0013) * 7 + Math.sin(timestamp * 0.0017) * 4;
 
@@ -219,16 +219,18 @@ import { Sparkles, ArrowRight } from 'lucide-astro';
         // Pointer event listeners khusus desktop
         hero.addEventListener('pointerenter', (e) => {
             if (isTouchDevice()) return;
-            const rect = hero.getBoundingClientRect();
-            mouseX = e.clientX - rect.left;
-            mouseY = e.clientY - rect.top;
+            updateCachedBounds();
+            const relX = e.pageX - cachedLeft;
+            const relY = e.pageY - cachedTop;
+            mouseX = relX;
+            mouseY = relY;
             currentX = mouseX;
             currentY = mouseY;
             isInside = true;
             proximityDots.style.opacity = '1';
 
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
+            const centerX = cachedWidth / 2;
+            const centerY = cachedHeight / 2;
             targetParallaxX = ((mouseX - centerX) / centerX) * 12;
             targetParallaxY = ((mouseY - centerY) / centerY) * 12;
 
@@ -237,16 +239,15 @@ import { Sparkles, ArrowRight } from 'lucide-astro';
 
         hero.addEventListener('pointermove', (e) => {
             if (isTouchDevice()) return;
-            const rect = hero.getBoundingClientRect();
-            mouseX = e.clientX - rect.left;
-            mouseY = e.clientY - rect.top;
+            mouseX = e.pageX - cachedLeft;
+            mouseY = e.pageY - cachedTop;
             if (!isInside) {
                 isInside = true;
                 proximityDots.style.opacity = '1';
             }
 
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
+            const centerX = cachedWidth / 2;
+            const centerY = cachedHeight / 2;
             targetParallaxX = ((mouseX - centerX) / centerX) * 12;
             targetParallaxY = ((mouseY - centerY) / centerY) * 12;
 
@@ -262,23 +263,22 @@ import { Sparkles, ArrowRight } from 'lucide-astro';
             if (!rafId) rafId = requestAnimationFrame(updateAnimation);
         });
 
-        // Touch event listeners khusus mobile (HP) untuk interaktivitas sentuhan
+        // Touch event listeners khusus mobile (HP) - zero reflow
         hero.addEventListener('touchstart', (e) => {
             if (!isTouchDevice()) return;
-            const rect = hero.getBoundingClientRect();
+            updateCachedBounds();
             if (e.touches.length > 0) {
                 touchActive = true;
-                touchX = e.touches[0].clientX - rect.left;
-                touchY = e.touches[0].clientY - rect.top;
+                touchX = e.touches[0].pageX - cachedLeft;
+                touchY = e.touches[0].pageY - cachedTop;
             }
         }, { passive: true });
 
         hero.addEventListener('touchmove', (e) => {
             if (!isTouchDevice()) return;
-            const rect = hero.getBoundingClientRect();
             if (e.touches.length > 0) {
-                touchX = e.touches[0].clientX - rect.left;
-                touchY = e.touches[0].clientY - rect.top;
+                touchX = e.touches[0].pageX - cachedLeft;
+                touchY = e.touches[0].pageY - cachedTop;
             }
         }, { passive: true });
 
@@ -290,32 +290,44 @@ import { Sparkles, ArrowRight } from 'lucide-astro';
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 isVisible = entry.isIntersecting;
-                if (isVisible && isTouchDevice()) {
-                    if (!rafId) rafId = requestAnimationFrame(updateAnimation);
+                if (isVisible) {
+                    updateCachedBounds();
+                    if (isTouchDevice() && !rafId) {
+                        rafId = requestAnimationFrame(updateAnimation);
+                    }
+                } else {
+                    if (rafId) {
+                        cancelAnimationFrame(rafId);
+                        rafId = null;
+                    }
                 }
             });
         }, { threshold: 0.05 });
 
         observer.observe(hero);
 
-        // Inisialisasi awal jika di HP
+        // Inisialisasi awal
+        updateCachedBounds();
         if (isTouchDevice()) {
-            const rect = hero.getBoundingClientRect();
-            initMobileSpots(rect);
+            initMobileSpots();
             rafId = requestAnimationFrame(updateAnimation);
         }
 
-        // Listener resize untuk transisi mulus antara desktop & HP
+        // Listener resize untuk update ukuran & transisi antara desktop & HP
+        let resizeTimeout: number | null = null;
         window.addEventListener('resize', () => {
-            if (isTouchDevice()) {
-                const rect = hero.getBoundingClientRect();
-                initMobileSpots(rect);
-                if (!rafId) rafId = requestAnimationFrame(updateAnimation);
-            } else {
-                if (!isInside) {
-                    proximityDots.style.opacity = '0';
+            if (resizeTimeout) clearTimeout(resizeTimeout);
+            resizeTimeout = window.setTimeout(() => {
+                updateCachedBounds();
+                if (isTouchDevice()) {
+                    initMobileSpots();
+                    if (!rafId && isVisible) rafId = requestAnimationFrame(updateAnimation);
+                } else {
+                    if (!isInside) {
+                        proximityDots.style.opacity = '0';
+                    }
                 }
-            }
+            }, 100);
         }, { passive: true });
     }
 </script>
