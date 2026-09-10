@@ -37,30 +37,19 @@ export const products: Product[] = [
         id: "prod-3",
         name: "Custom Design Tumbler",
         category: "Drinkware",
-        basePrice: 25000,
-        description: "Tumbler stainless steel dengan desain sesuai keinginan kamu.",
+        basePrice: 50000,
+        description: "Tumbler dengan desain sesuai keinginan kamu.",
         imageName: "tumbler.webp",
         isBestSeller: false
     },
     {
         id: "prod-4",
-        name: "Custom Kaos DTF Longsleeve",
-        category: "Apparel",
-        basePrice: 75000,
-        description: "Kaos katun combed 30s dengan desain sesuai keinginan kamu.",
-        imageName: "kaos-longsleeve.webp",
-        isBestSeller: false,
-        variants: [
-            { size: "XS", price: 75000 },
-            { size: "S", price: 75000 },
-            { size: "M", price: 75000 },
-            { size: "L", price: 75000 },
-            { size: "XL", price: 75000 },
-            { size: "XXL", price: 80000 },
-            { size: "3XL", price: 85000 },
-            { size: "4XL", price: 85000 },
-            { size: "5XL", price: 90000 }
-        ]
+        name: "Custom Design Totebag",
+        category: "Accessories",
+        basePrice: 40000,
+        description: "Totebag dengan desain sesuai keinginan kamu.",
+        imageName: "totebag.webp",
+        isBestSeller: false
     },
     {
         id: "prod-5",
