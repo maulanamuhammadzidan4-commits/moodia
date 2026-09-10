@@ -7,9 +7,8 @@ import { companyInfo } from '../data/company';
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <!-- Brand -->
             <div>
-                <div class="flex items-center gap-2 mb-3">
-                    <img src="/logo.svg" alt="MOODIA Logo" class="h-8 w-auto object-contain brightness-200" />
-                    <span class="font-extrabold text-xl tracking-tight text-white">{companyInfo.name}</span>
+                <div class="mb-4">
+                    <img src="/logo-3.svg" alt={companyInfo.name} class="h-9 md:h-10 w-auto object-contain brightness-200" />
                 </div>
                 <p class="text-sm text-blue-300 leading-relaxed max-w-xs">
                     {companyInfo.description}

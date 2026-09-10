@@ -5,9 +5,8 @@ import { companyInfo } from '../data/company';
 <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-blue-100 shadow-sm">
     <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <!-- Brand Identity & Logo MOODIA -->
-        <a href="#" class="flex items-center gap-2 hover:opacity-80 transition">
-            <img src="/logo.svg" alt="MOODIA Logo" class="h-8 w-auto object-contain" />
-            <span class="font-extrabold text-xl tracking-tight text-blue-900">{companyInfo.name}</span>
+        <a href="#" class="flex items-center hover:opacity-80 transition py-1" aria-label={companyInfo.name}>
+            <img src="/logo.svg" alt={companyInfo.name} class="h-9 md:h-10 w-auto object-contain" />
         </a>
 
         <!-- Navigation Links -->
